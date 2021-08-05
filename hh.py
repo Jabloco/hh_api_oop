@@ -7,6 +7,13 @@ class Headhunter():
         pass
 
     def GetVacancyList(self, text="python junior", area=113):
+        """
+        Метод для полуяения списка ссылок на вакансии.
+        Аргументы:
+            text - поисковый запрос
+            area - регион поиска. 113 - Россия
+        """
+
         def getPage(page = 0):
             """
             Создаем функцию для получения страницы со списком вакансий.
@@ -15,16 +22,17 @@ class Headhunter():
             """
             # Словарь для параметров GET-запроса
             params = {
-                'text': text, # Текст фильтра
+                'text': text,
                 'page': page, # Индекс страницы поиска на HH
                 'per_page': 100, # Кол-во вакансий на 1 странице
-                'area': area # регион поиска. 113 - Россия
+                'area': area 
             }
         
             req = requests.get('https://api.hh.ru/vacancies', params) # Посылаем запрос к API
             data = req.content.decode() # Декодируем его ответ, чтобы Кириллица отображалась корректно
             req.close()
             return data
+            
         self.url_list = []
         for page in range(20):
             js_str = getPage(page) #получаем ответ в виде json - файла
@@ -37,6 +45,11 @@ class Headhunter():
         return self.url_list
 
     def GetVacancyDetail(self, url):
+        """
+        Метод для получения детальной информации о вакансии
+        Аргументы:
+            url - ссылка на вакансию в формате api (например: https://api.hh.ru/vacancies/44528998?host=hh.ru)
+        """
         self.url = url
         req = requests.get(self.url)
         # with open('vacancy_detail.json', 'w', encoding='utf8') as f:
@@ -54,10 +67,14 @@ class Headhunter():
         pass
 
 x = Headhunter()
+
+# for i in x.GetVacancyList():
+#     print(x.GetVacancyDetail(i)['description'])
+#     print()
 # for i in x.GetVacancyList():
 #     print(i)
 
 # with open('vacancy_detail.json', 'w') as f:
 #     f.write(str(x.GetVacancyDetail('https://api.hh.ru/vacancies/44528998?host=hh.ru')))
 
-print(x.GetVacancyDetail('https://api.hh.ru/vacancies/44528998?host=hh.ru')['description'])
+# print(x.GetVacancyDetail('https://api.hh.ru/vacancies/44528998?host=hh.ru')['description'])
