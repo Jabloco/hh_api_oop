@@ -13,19 +13,21 @@ class Headhunter():
             text - поисковый запрос
             area - регион поиска. 113 - Россия
         """
+        self.text = text
+        self.area = area
 
         def getPage(page = 0):
             """
-            Создаем функцию для получения страницы со списком вакансий.
+            Функция для получения страницы со списком вакансий.
             Аргументы:
                 page - Индекс страницы, начинается с 0. Значение по умолчанию 0, т.е. первая страница
             """
             # Словарь для параметров GET-запроса
             params = {
-                'text': text,
+                'text': self.text,
                 'page': page, # Индекс страницы поиска на HH
                 'per_page': 100, # Кол-во вакансий на 1 странице
-                'area': area 
+                'area': self.area 
             }
         
             req = requests.get('https://api.hh.ru/vacancies', params) # Посылаем запрос к API
@@ -71,8 +73,8 @@ x = Headhunter()
 # for i in x.GetVacancyList():
 #     print(x.GetVacancyDetail(i)['description'])
 #     print()
-# for i in x.GetVacancyList():
-#     print(i)
+for i in x.GetVacancyList():
+    print(i)
 
 # with open('vacancy_detail.json', 'w') as f:
 #     f.write(str(x.GetVacancyDetail('https://api.hh.ru/vacancies/44528998?host=hh.ru')))
