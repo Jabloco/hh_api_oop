@@ -18,7 +18,6 @@ class PostgresWorker():
                 password = self.password,
                 host = self.host,
                 port = self.port,
-                # database = 'postgres'
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
@@ -53,5 +52,5 @@ class PostgresWorker():
                 connection.close
 
 db = PostgresWorker()
-# db.create_database()
+db.create_database()
 db.create_table()

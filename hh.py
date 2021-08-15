@@ -1,10 +1,17 @@
 import requests
 import json
 import time
+import psycopg2
+import db_setting
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 class Headhunter():
     def __init__(self):
-        pass
+        self.login = db_setting.LOGIN
+        self.password = db_setting.PASSWORD
+        self.host = db_setting.HOST
+        self.port = db_setting.PORT
+        self.database = db_setting.DB_NAME
 
     def GetVacancyList(self, text="python junior", area=113):
         """
@@ -62,21 +69,60 @@ class Headhunter():
         return self.detail
 
 
-    def WriteToBase(self):
-        pass
+    def WriteToBase(self, table_name, columns, values):
+        try:
+            connection = psycopg2.connect(
+                user = self.login,
+                password = self.password,
+                host = self.host,
+                port = self.port,
+                database = self.database
+            )
+            connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+            cursor = connection.cursor()
+            # вокруг values какой-то костыль, мне не нравиться =(
+            # sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ('{values}');"  # работает для вставки в один столбец
+            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES {values};"  # работает для несколькиих столбцов, но не работает для одного
+            # вокруг values какой-то костыль, мне не нравиться =(
+            cursor.execute(sql_insert)
+        except (Exception, psycopg2.Error) as error:
+            print("Что-то пошло не так", error)
+        finally:
+            if connection:
+                cursor.close()
+                connection.close
 
-    def ReadFromBase(self):
-        pass
+    def ReadFromBase(self, columns, table_name):
+        try:
+            connection = psycopg2.connect(
+                user = self.login,
+                password = self.password,
+                host = self.host,
+                port = self.port,
+                database = self.database
+            )
+            cursor = connection.cursor()
+            sql_select = f"SELECT {columns} FROM {table_name};"
+            cursor.execute(sql_select)
+            return cursor.fetchall()
+        except (Exception, psycopg2.Error) as error:
+            print("Что-то пошло не так", error)
+        finally:
+            if connection:
+                cursor.close()
+                connection.close
 
 x = Headhunter()
 
-# for i in x.GetVacancyList():
-#     print(x.GetVacancyDetail(i)['description'])
-#     print()
-for i in x.GetVacancyList():
-    print(i)
 
-# with open('vacancy_detail.json', 'w') as f:
-#     f.write(str(x.GetVacancyDetail('https://api.hh.ru/vacancies/44528998?host=hh.ru')))
+# table_name = 'vacancy'
+# columns = 'hh_id, name , salary, description'
+# values = '798', 'Python', '100000', 'dkdfvfdk8954894xfkjdnnj'
 
-# print(x.GetVacancyDetail('https://api.hh.ru/vacancies/44528998?host=hh.ru')['description'])
+table_name = 'country'
+columns = 'name'
+values = '798ffj'
+print(values)
+x.WriteToBase(table_name,columns,values)
+print(x.ReadFromBase(columns, table_name))
+print()
