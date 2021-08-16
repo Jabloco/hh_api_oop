@@ -42,8 +42,8 @@ class PostgresWorker():
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
             for table in self.tables:
-                sql_create_db = table
-                cursor.execute(sql_create_db)
+                sql_create_table = table
+                cursor.execute(sql_create_table)
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
         finally:

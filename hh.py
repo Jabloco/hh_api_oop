@@ -70,6 +70,13 @@ class Headhunter():
 
 
     def WriteToBase(self, table_name, columns, values):
+        """
+        Метод для записи в базу данных
+        Аргументы:
+            table_name - имя таблицы
+            columns - колонки
+            values - значения
+        """
         try:
             connection = psycopg2.connect(
                 user = self.login,
@@ -80,11 +87,9 @@ class Headhunter():
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
-            # вокруг values какой-то костыль, мне не нравиться =(
-            # sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ('{values}');"  # работает для вставки в один столбец
-            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES {values};"  # работает для несколькиих столбцов, но не работает для одного
-            # вокруг values какой-то костыль, мне не нравиться =(
-            cursor.execute(sql_insert)
+            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"  # работает для несколькиих столбцов, но не работает для одного
+            print(sql_insert)
+            cursor.execute(sql_insert, values)
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
         finally:
@@ -93,6 +98,12 @@ class Headhunter():
                 connection.close
 
     def ReadFromBase(self, columns, table_name):
+        """
+        Метод получения данных из базы.
+        Аргументы:
+            columns - колонки, которые считываем
+            table_name - таблица в которой ищем
+        """
         try:
             connection = psycopg2.connect(
                 user = self.login,
@@ -115,14 +126,14 @@ class Headhunter():
 x = Headhunter()
 
 
-# table_name = 'vacancy'
-# columns = 'hh_id, name , salary, description'
-# values = '798', 'Python', '100000', 'dkdfvfdk8954894xfkjdnnj'
+table_name = 'vacancy'
+columns = 'hh_id, name , salary, description'
+values = '798', 'Python', '100000', 'CREATE DATABASE tyo;'
 
-table_name = 'country'
-columns = 'name'
-values = '798ffj'
-print(values)
+# table_name = 'country'
+# columns = 'name'
+# values = ("qqqq98ffj",) # в таком формате передается единичное значение values
+# print(values)
 x.WriteToBase(table_name,columns,values)
 print(x.ReadFromBase(columns, table_name))
 print()
