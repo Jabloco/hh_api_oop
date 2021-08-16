@@ -15,25 +15,25 @@ class Headhunter():
 
     def GetVacancyList(self, text="python junior", area=113):
         """
-        Метод для полуяения списка ссылок на вакансии.
-        Аргументы:
-            text - поисковый запрос
-            area - регион поиска. 113 - Россия
+        Метод для полуяения списка ссылок на вакансии. \n
+        Аргументы:\n
+            text - поисковый запрос\n
+            area - регион поиска. 113 - Россия\n
         """
         self.text = text
         self.area = area
 
         def getPage(page = 0):
             """
-            Функция для получения страницы со списком вакансий.
-            Аргументы:
-                page - Индекс страницы, начинается с 0. Значение по умолчанию 0, т.е. первая страница
+            Функция для получения страницы со списком вакансий. \n
+            Аргументы:\n
+                page - Индекс страницы, начинается с 0. Значение по умолчанию 0, т.е. первая страница\n
             """
             # Словарь для параметров GET-запроса
             params = {
                 'text': self.text,
                 'page': page, # Индекс страницы поиска на HH
-                'per_page': 100, # Кол-во вакансий на 1 странице
+                'per_page': 1, # Кол-во вакансий на 1 странице
                 'area': self.area 
             }
         
@@ -43,7 +43,7 @@ class Headhunter():
             return data
             
         self.url_list = []
-        for page in range(20):
+        for page in range(1):
             js_str = getPage(page) #получаем ответ в виде json - файла
             js = json.loads(js_str) # Преобразуем текст ответа запроса в словарь Python
             # добавляем url в список ссылок
@@ -55,9 +55,9 @@ class Headhunter():
 
     def GetVacancyDetail(self, url):
         """
-        Метод для получения детальной информации о вакансии
-        Аргументы:
-            url - ссылка на вакансию в формате api (например: https://api.hh.ru/vacancies/44528998?host=hh.ru)
+        Метод для получения детальной информации о вакансии\n
+        Аргументы:\n
+            url - ссылка на вакансию в формате api (например: https://api.hh.ru/vacancies/44528998?host=hh.ru)\n
         """
         self.url = url
         req = requests.get(self.url)
@@ -69,13 +69,13 @@ class Headhunter():
         return self.detail
 
 
-    def WriteToBase(self, table_name, columns, values):
+    def InsertToBase(self, table_name, columns, values):
         """
-        Метод для записи в базу данных
-        Аргументы:
-            table_name - имя таблицы
-            columns - колонки
-            values - значения
+        Метод для записи в базу данных\n
+        Аргументы:\n
+            table_name - имя таблицы\n
+            columns - колонки\n
+            values - значения\n
         """
         try:
             connection = psycopg2.connect(
@@ -87,7 +87,7 @@ class Headhunter():
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
-            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"  # работает для несколькиих столбцов, но не работает для одного
+            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"
             print(sql_insert)
             cursor.execute(sql_insert, values)
         except (Exception, psycopg2.Error) as error:
@@ -97,12 +97,12 @@ class Headhunter():
                 cursor.close()
                 connection.close
 
-    def ReadFromBase(self, columns, table_name):
+    def SelectFromBase(self, columns, table_name):
         """
-        Метод получения данных из базы.
-        Аргументы:
-            columns - колонки, которые считываем
-            table_name - таблица в которой ищем
+        Метод получения данных из базы.\n
+        Аргументы:\n
+            columns - колонки, которые считываем\n
+            table_name - таблица в которой ищем\n
         """
         try:
             connection = psycopg2.connect(
@@ -123,17 +123,10 @@ class Headhunter():
                 cursor.close()
                 connection.close
 
+        def JoinTables(self):
+            pass
+
 x = Headhunter()
 
-
-table_name = 'vacancy'
-columns = 'hh_id, name , salary, description'
-values = '798', 'Python', '100000', 'CREATE DATABASE tyo;'
-
-# table_name = 'country'
-# columns = 'name'
-# values = ("qqqq98ffj",) # в таком формате передается единичное значение values
-# print(values)
-x.WriteToBase(table_name,columns,values)
-print(x.ReadFromBase(columns, table_name))
-print()
+print('fg' in x.SelectFromBase('name', 'country'))
+# x.GetVacancyDetail(x.GetVacancyList()[0])
