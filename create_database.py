@@ -10,7 +10,8 @@ class PostgresWorker():
         self.host = db_setting.HOST
         self.port = db_setting.PORT
         self.tables = db_setting.TABLES_TUPLE
-    
+        self.database = db_setting.DB_NAME
+
     def create_database(self):
         try:
             connection = psycopg2.connect(
@@ -21,7 +22,7 @@ class PostgresWorker():
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
-            sql_create_db = 'CREATE DATABASE vacancys;'
+            sql_create_db = f'CREATE DATABASE {self.database};'
             cursor.execute(sql_create_db)
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
@@ -37,7 +38,7 @@ class PostgresWorker():
                 password = self.password,
                 host = self.host,
                 port = self.port,
-                database = 'vacancys'
+                database = self.database
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()

@@ -33,7 +33,7 @@ class Headhunter():
             params = {
                 'text': self.text,
                 'page': page, # Индекс страницы поиска на HH
-                'per_page': 1, # Кол-во вакансий на 1 странице
+                'per_page': 20, # Кол-во вакансий на 1 странице
                 'area': self.area 
             }
         
@@ -87,9 +87,11 @@ class Headhunter():
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
-            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"
-            print(sql_insert)
-            cursor.execute(sql_insert, values)
+            # sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"
+            # print(sql_insert)
+            # cursor.execute(sql_insert, values)
+            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ('{values}')"
+            cursor.execute(sql_insert)
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
         finally:
@@ -123,10 +125,20 @@ class Headhunter():
                 cursor.close()
                 connection.close
 
-        def JoinTables(self):
-            pass
+    def JoinTables(self):
+        pass
 
 x = Headhunter()
 
-print('fg' in x.SelectFromBase('name', 'country'))
-# x.GetVacancyDetail(x.GetVacancyList()[0])
+for url in x.GetVacancyList():
+    skill_list = [skill['name'] for skill in x.GetVacancyDetail(url)['key_skills']]
+    for skill in skill_list:
+        # if skill not in x.SelectFromBase('name', 'keyskill'):
+        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill')]:
+            x.InsertToBase('keyskill', 'name', skill)
+        print(skill)
+
+
+print([skill[0] for skill in x.SelectFromBase('name', 'keyskill')])
+# l = [skill['name'] for vacansy_url in x.GetVacancyList() for skill in x.GetVacancyDetail(vacansy_url)['key_skills']]
+# print(l[:])

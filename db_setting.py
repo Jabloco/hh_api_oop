@@ -5,16 +5,10 @@ PORT = '5432'
 DB_NAME = 'vacancys'
 
 TABLES_TUPLE = (
-    # страна
-    """CREATE TABLE country( 
-        id serial primary key,
-        name varchar(255)
-        );""",
     # город
     """CREATE TABLE city(
         id serial primary key,
-        name varchar(255),
-        country_id integer references country(id)
+        name varchar(255)
         );""",
     # работодатель
     """CREATE TABLE employer(
@@ -32,7 +26,9 @@ TABLES_TUPLE = (
         id serial primary key,
         hh_id integer,
         name varchar(255),
-        salary money,
+        salary_from integer,
+        salary_to integer,
+        salary_currency varchar(10),
         description text,
         date_create date,
         city_id integer references city(id),
