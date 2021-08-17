@@ -17,8 +17,8 @@ class Headhunter():
         """
         Метод для полуяения списка ссылок на вакансии. \n
         Аргументы:\n
-            text - поисковый запрос\n
-            area - регион поиска. 113 - Россия\n
+            text - поисковый запрос (строка)\n
+            area - регион поиска (число). 113 - Россия\n
         """
         self.text = text
         self.area = area
@@ -27,13 +27,13 @@ class Headhunter():
             """
             Функция для получения страницы со списком вакансий. \n
             Аргументы:\n
-                page - Индекс страницы, начинается с 0. Значение по умолчанию 0, т.е. первая страница\n
+                page - Индекс страницы (число), начинается с 0. Значение по умолчанию 0, т.е. первая страница\n
             """
             # Словарь для параметров GET-запроса
             params = {
                 'text': self.text,
                 'page': page, # Индекс страницы поиска на HH
-                'per_page': 20, # Кол-во вакансий на 1 странице
+                'per_page': 1, # Кол-во вакансий на 1 странице
                 'area': self.area 
             }
         
@@ -57,7 +57,7 @@ class Headhunter():
         """
         Метод для получения детальной информации о вакансии\n
         Аргументы:\n
-            url - ссылка на вакансию в формате api (например: https://api.hh.ru/vacancies/44528998?host=hh.ru)\n
+            url - ссылка (строка) на вакансию в формате api (например: https://api.hh.ru/vacancies/44528998?host=hh.ru)\n
         """
         self.url = url
         req = requests.get(self.url)
@@ -73,9 +73,9 @@ class Headhunter():
         """
         Метод для записи в базу данных\n
         Аргументы:\n
-            table_name - имя таблицы\n
-            columns - колонки\n
-            values - значения\n
+            table_name - имя таблицы (строка)\n
+            columns - колонки (строка)\n
+            values - значения (кортеж)\n
         """
         try:
             connection = psycopg2.connect(
@@ -87,11 +87,8 @@ class Headhunter():
             )
             connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
             cursor = connection.cursor()
-            # sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"
-            # print(sql_insert)
-            # cursor.execute(sql_insert, values)
-            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ('{values}')"
-            cursor.execute(sql_insert)
+            sql_insert = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(values))});"
+            cursor.execute(sql_insert, values)
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
         finally:
@@ -103,8 +100,8 @@ class Headhunter():
         """
         Метод получения данных из базы.\n
         Аргументы:\n
-            columns - колонки, которые считываем\n
-            table_name - таблица в которой ищем\n
+            columns - колонки, которые считываем (строка)\n
+            table_name - таблица в которой ищем (строка)\n
         """
         try:
             connection = psycopg2.connect(
@@ -131,14 +128,25 @@ class Headhunter():
 x = Headhunter()
 
 for url in x.GetVacancyList():
-    skill_list = [skill['name'] for skill in x.GetVacancyDetail(url)['key_skills']]
-    for skill in skill_list:
-        # if skill not in x.SelectFromBase('name', 'keyskill'):
-        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill')]:
-            x.InsertToBase('keyskill', 'name', skill)
-        print(skill)
 
+    # что бы не делать запрос к API каждый раз
+    vacancy_detail_dict = x.GetVacancyDetail(url)
+    # запись ключевых навыков в БД
+    skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
+    for skill in skill_list:
+        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill')]:
+            x.InsertToBase('keyskill', 'name', (skill,))
+    
+    # запись городов в БД
+    city_name = vacancy_detail_dict['area']['name']
+    if city_name not in [city[0] for city in x.SelectFromBase('name', 'city')]:
+        x.InsertToBase('city', 'name', (city_name,) )
+
+    # запись работодателей в БД
+    employer = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
+    if employer[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer')]:
+        x.InsertToBase('employer', 'name, url', employer)
 
 print([skill[0] for skill in x.SelectFromBase('name', 'keyskill')])
-# l = [skill['name'] for vacansy_url in x.GetVacancyList() for skill in x.GetVacancyDetail(vacansy_url)['key_skills']]
-# print(l[:])
+print([city[0] for city in x.SelectFromBase('name', 'city')])
+print([employer[0] + ' ' + employer[1] for employer in x.SelectFromBase('name, url', 'employer')])
