@@ -102,8 +102,10 @@ class Headhunter():
         Аргументы:\n
             columns - колонки, которые считываем (строка)\n
             table_name - таблица в которой ищем (строка)\n
+            Фильтрация результатов.
             filter_colomn - колонка, по которой ищем (строка)\n
-            filter_value - значение по которому ищем (строка)
+            filter_value - значение по которому ищем (строка)\n
+            Передается ТОЛЬКО по подному аргументу фильтрации.
         """
         try:
             connection = psycopg2.connect(
@@ -114,7 +116,6 @@ class Headhunter():
                 database = self.database
             )
             cursor = connection.cursor()
-            # filter_union = filter_colomns + filter_values
             if filter_colomn == '':
                 sql_select = f"SELECT {columns} FROM {table_name};"
             elif filter_value == '':
@@ -122,7 +123,6 @@ class Headhunter():
             else:
                 sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomn}=('{filter_value}');"
             cursor.execute(sql_select)
-            print(sql_select)
             return cursor.fetchall()
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
@@ -136,29 +136,58 @@ class Headhunter():
 
 x = Headhunter()
 
-# for url in x.GetVacancyList():
-
-#     # что бы не делать запрос к API каждый раз
-#     vacancy_detail_dict = x.GetVacancyDetail(url)
-#     # запись ключевых навыков в БД
-#     skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
-#     for skill in skill_list:
-#         if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill')]:
-#             x.InsertToBase('keyskill', 'name', (skill,))
+for url in x.GetVacancyList():
+    print(url)
+    # что бы не делать запрос к API каждый раз
+    vacancy_detail_dict = x.GetVacancyDetail(url)
+    # запись ключевых навыков в БД
+    skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
+    for skill in skill_list:
+        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill')]:
+            x.InsertToBase('keyskill', 'name', (skill,))
     
-#     # запись городов в БД
-#     city_name = vacancy_detail_dict['area']['name']
-#     if city_name not in [city[0] for city in x.SelectFromBase('name', 'city')]:
-#         x.InsertToBase('city', 'name', (city_name,) )
+    # запись городов в БД
+    city_name = vacancy_detail_dict['area']['name']
+    if city_name not in [city[0] for city in x.SelectFromBase('name', 'city')]:
+        x.InsertToBase('city', 'name', (city_name,) )
 
-#     # запись работодателей в БД
-#     employer = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
-#     if employer[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer')]:
-#         x.InsertToBase('employer', 'name, url', employer)
+    # запись работодателей в БД
+    employer = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
+    if employer[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer')]:
+        x.InsertToBase('employer', 'name, url', employer)
 
+    # обработка пустых значений вознаграждения
+    if vacancy_detail_dict['salary'] is None:
+        salary_from = 0
+        salary_to = 0
+        salary_currency = 'n/n'
+    else:
+        salary_from = vacancy_detail_dict['salary']['from']
+
+        if vacancy_detail_dict['salary']['to'] is None:
+            salary_to = 0
+        else:
+            salary_to = vacancy_detail_dict['salary']['to']
+        salary_currency = vacancy_detail_dict['salary']['currency']
+    
+    vacancy_detail_tuple = (
+        vacancy_detail_dict['id'],
+        vacancy_detail_dict['name'],
+        salary_from,
+        salary_to,
+        salary_currency,
+        vacancy_detail_dict['description'],
+        vacancy_detail_dict['created_at'][:10],
+        [id[0] for id in x.SelectFromBase('id', 'city', 'name', vacancy_detail_dict['area']['name'])][0],
+        [id[0] for id in x.SelectFromBase('id', 'employer', 'name', vacancy_detail_dict['employer']['name'])][0]
+    )
+
+    for i in vacancy_detail_tuple:
+        print(i)
+    print('\n'*3)
 # print([skill[0] for skill in x.SelectFromBase('name', 'keyskill')])
 # print([city[0] for city in x.SelectFromBase('name', 'city')])
 # print([employer[0] + ' ' + employer[1] for employer in x.SelectFromBase('name, url', 'employer')])
 
 # print(x.SelectFromBase('name', 'employer'))
-print(x.SelectFromBase('id, name', 'employer', 'name', 'DataFork'))
+# print(x.SelectFromBase('id, name', 'employer', 'name', 'DataFork'))
