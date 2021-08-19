@@ -137,24 +137,24 @@ class Headhunter():
 x = Headhunter()
 
 for url in x.GetVacancyList():
-    print(url)
+
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
     # запись ключевых навыков в БД
     skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
     for skill in skill_list:
-        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill')]:
+        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill', 'name', skill)]:
             x.InsertToBase('keyskill', 'name', (skill,))
     
     # запись городов в БД
     city_name = vacancy_detail_dict['area']['name']
-    if city_name not in [city[0] for city in x.SelectFromBase('name', 'city')]:
+    if city_name not in [city[0] for city in x.SelectFromBase('name', 'city', 'name', city_name)]:
         x.InsertToBase('city', 'name', (city_name,) )
 
     # запись работодателей в БД
-    employer = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
-    if employer[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer')]:
-        x.InsertToBase('employer', 'name, url', employer)
+    employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
+    if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', employer_tuple[0])]:
+        x.InsertToBase('employer', 'name, url', employer_tuple)
 
     # обработка пустых значений вознаграждения
     if vacancy_detail_dict['salary'] is None:
@@ -170,8 +170,9 @@ for url in x.GetVacancyList():
             salary_to = vacancy_detail_dict['salary']['to']
         salary_currency = vacancy_detail_dict['salary']['currency']
     
+    # кортеж с данными о вакансии
     vacancy_detail_tuple = (
-        vacancy_detail_dict['id'],
+        vacancy_detail_dict['id'], #строка
         vacancy_detail_dict['name'],
         salary_from,
         salary_to,
@@ -182,12 +183,14 @@ for url in x.GetVacancyList():
         [id[0] for id in x.SelectFromBase('id', 'employer', 'name', vacancy_detail_dict['employer']['name'])][0]
     )
 
-    for i in vacancy_detail_tuple:
-        print(i)
-    print('\n'*3)
-# print([skill[0] for skill in x.SelectFromBase('name', 'keyskill')])
-# print([city[0] for city in x.SelectFromBase('name', 'city')])
-# print([employer[0] + ' ' + employer[1] for employer in x.SelectFromBase('name, url', 'employer')])
+    # запись вакансии в БД
+    if int(vacancy_detail_tuple[0]) not in [vacancy_id[0] for vacancy_id in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_tuple[0])]:
+        x.InsertToBase(
+            'vacancy',
+            'hh_id, name, salary_from, salary_to, salary_currency, description, date_create, city_id, employer_id',
+            vacancy_detail_tuple
+            )
 
-# print(x.SelectFromBase('name', 'employer'))
-# print(x.SelectFromBase('id, name', 'employer', 'name', 'DataFork'))
+print(x.SelectFromBase('id, name', 'vacancy'))
+print(x.SelectFromBase('id, name', 'city'))
+print(x.SelectFromBase('id, name, url', 'employer'))
