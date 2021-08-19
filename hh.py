@@ -96,12 +96,14 @@ class Headhunter():
                 cursor.close()
                 connection.close
 
-    def SelectFromBase(self, columns, table_name, filter_colomns='', filter_values=''):
+    def SelectFromBase(self, columns, table_name, filter_colomn='', filter_value=''):
         """
         Метод получения данных из базы.\n
         Аргументы:\n
             columns - колонки, которые считываем (строка)\n
             table_name - таблица в которой ищем (строка)\n
+            filter_colomn - колонка, по которой ищем (строка)\n
+            filter_value - значение по которому ищем (строка)
         """
         try:
             connection = psycopg2.connect(
@@ -112,13 +114,15 @@ class Headhunter():
                 database = self.database
             )
             cursor = connection.cursor()
-            if filter_colomns == '':
+            # filter_union = filter_colomns + filter_values
+            if filter_colomn == '':
                 sql_select = f"SELECT {columns} FROM {table_name};"
-            elif filter_values == '':
-                sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomns} IS NOT NULL;"
+            elif filter_value == '':
+                sql_select = f"SELECT {columns} FROM {table_name} WHERE ({filter_colomn}) IS NOT NULL;"
             else:
-                sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomns}={filter_values};" # условия должны передаватья в виде кортежей если их > 1
+                sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomn}=('{filter_value}');"
             cursor.execute(sql_select)
+            print(sql_select)
             return cursor.fetchall()
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
@@ -156,6 +160,5 @@ x = Headhunter()
 # print([city[0] for city in x.SelectFromBase('name', 'city')])
 # print([employer[0] + ' ' + employer[1] for employer in x.SelectFromBase('name, url', 'employer')])
 
-print(x.SelectFromBase('id, name', 'employer'))
-print(x.SelectFromBase('id, name', 'employer', 'name'))
-print(x.SelectFromBase('id, name', 'employer', ('name', 'url')))
+# print(x.SelectFromBase('name', 'employer'))
+print(x.SelectFromBase('id, name', 'employer', 'name', 'DataFork'))
