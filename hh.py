@@ -190,7 +190,14 @@ for url in x.GetVacancyList():
             'hh_id, name, salary_from, salary_to, salary_currency, description, date_create, city_id, employer_id',
             vacancy_detail_tuple
             )
+    
+    # запись связующей таблицы vacancy_skill
+    vacancy_id = [id[0] for id in x.SelectFromBase('id', 'vacancy', 'hh_id', vacancy_detail_dict['id'])]
+    print('vacancy_id=', vacancy_id)
+    print('skill_list=', skill_list)
+    print(x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0]))
 
-print(x.SelectFromBase('id, name', 'vacancy'))
-print(x.SelectFromBase('id, name', 'city'))
-print(x.SelectFromBase('id, name, url', 'employer'))
+# print(x.SelectFromBase('id, name', 'vacancy'))
+# print(x.SelectFromBase('id, name', 'city'))
+# print(x.SelectFromBase('id, name', 'keyskill'))
+# print(x.SelectFromBase('id, name, url', 'employer'))
