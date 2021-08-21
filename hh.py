@@ -33,7 +33,7 @@ class Headhunter():
             params = {
                 'text': self.text,
                 'page': page, # Индекс страницы поиска на HH
-                'per_page': 5, # Кол-во вакансий на 1 странице
+                'per_page': 100, # Кол-во вакансий на 1 странице
                 'area': self.area 
             }
         
@@ -43,14 +43,14 @@ class Headhunter():
             return data
             
         self.url_list = []
-        for page in range(1):
+        for page in range(20):
             js_str = getPage(page) #получаем ответ в виде json - файла
             js = json.loads(js_str) # Преобразуем текст ответа запроса в словарь Python
             # добавляем url в список ссылок
             self.url_list.extend([js['items'][i]['url'] for i in range(len(js['items']))])
             if (js['pages'] - page) <= 1:
                 break
-            time.sleep(0.1)
+            time.sleep(0.3)
         return self.url_list
 
     def GetVacancyDetail(self, url):
@@ -65,7 +65,7 @@ class Headhunter():
         #     f.write(req.content.decode())
         self.detail = json.loads(req.content.decode())
         req.close()
-        time.sleep(0.1)
+        time.sleep(0.3)
         return self.detail
 
 
@@ -137,7 +137,7 @@ class Headhunter():
 x = Headhunter()
 
 for url in x.GetVacancyList():
-
+    print(url)
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
     # запись ключевых навыков в БД
@@ -193,9 +193,11 @@ for url in x.GetVacancyList():
     
     # запись связующей таблицы vacancy_skill
     vacancy_id = [id[0] for id in x.SelectFromBase('id', 'vacancy', 'hh_id', vacancy_detail_dict['id'])]
-    print('vacancy_id=', vacancy_id)
-    print('skill_list=', skill_list)
-    print(x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0]))
+    skill_id_list = [[id[0] for id in x.SelectFromBase('id', 'keyskill', 'name', skill)][0] for skill in skill_list]
+    vacancy_id_skill_id_pair = [(vac_id, s_id) for vac_id in vacancy_id for s_id in skill_id_list]
+    for pair in vacancy_id_skill_id_pair:
+        if pair not in [pair[0:2] for pair in x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0])]:
+            x.InsertToBase('vacancy_skill', 'vacancy_id, keyskill_id', pair)
 
 # print(x.SelectFromBase('id, name', 'vacancy'))
 # print(x.SelectFromBase('id, name', 'city'))
