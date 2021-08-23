@@ -65,7 +65,7 @@ class Headhunter():
         #     f.write(req.content.decode())
         self.detail = json.loads(req.content.decode())
         req.close()
-        time.sleep(1)
+        time.sleep(0.3)
         return self.detail
 
 
@@ -143,7 +143,7 @@ for url in x.GetVacancyList():
     print(url)
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
-    print(vacancy_detail_dict['enmployer']['name'])
+    print(vacancy_detail_dict['employer']['name'])
     # запись ключевых навыков в БД
     skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
     for skill in skill_list:
