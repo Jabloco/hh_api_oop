@@ -50,7 +50,7 @@ class Headhunter():
             self.url_list.extend([js['items'][i]['url'] for i in range(len(js['items']))])
             if (js['pages'] - page) <= 1:
                 break
-            time.sleep(0.3)
+            time.sleep(0.5)
         return self.url_list
 
     def GetVacancyDetail(self, url):
@@ -65,7 +65,7 @@ class Headhunter():
         #     f.write(req.content.decode())
         self.detail = json.loads(req.content.decode())
         req.close()
-        time.sleep(0.3)
+        time.sleep(1)
         return self.detail
 
 
@@ -117,12 +117,15 @@ class Headhunter():
             )
             cursor = connection.cursor()
             if filter_colomn == '':
-                sql_select = f"SELECT {columns} FROM {table_name};"
+                # sql_select = f"SELECT {columns} FROM {table_name};"
+                sql_select = """SELECT {col} FROM {t_name};"""
             elif filter_value == '':
-                sql_select = f"SELECT {columns} FROM {table_name} WHERE ({filter_colomn}) IS NOT NULL;"
+                # sql_select = f"SELECT {columns} FROM {table_name} WHERE ({filter_colomn}) IS NOT NULL;"
+                sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} IS NOT NULL;"""
             else:
-                sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomn}=('{filter_value}');"
-            cursor.execute(sql_select)
+                # sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomn}=('{filter_value}');"
+                sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} = '{f_val}';"""
+            cursor.execute(sql_select.format(col = columns, t_name = table_name, f_col = filter_colomn, f_val = filter_value))
             return cursor.fetchall()
         except (Exception, psycopg2.Error) as error:
             print("Что-то пошло не так", error)
@@ -140,6 +143,7 @@ for url in x.GetVacancyList():
     print(url)
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
+    print(vacancy_detail_dict['enmployer']['name'])
     # запись ключевых навыков в БД
     skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
     for skill in skill_list:
