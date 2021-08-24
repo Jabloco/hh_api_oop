@@ -124,7 +124,7 @@ class Headhunter():
                 sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} IS NOT NULL;"""
             else:
                 # sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomn}=('{filter_value}');"
-                sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} = '{f_val}';"""
+                sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} = $${f_val}$$;"""
             cursor.execute(sql_select.format(col = columns, t_name = table_name, f_col = filter_colomn, f_val = filter_value))
             return cursor.fetchall()
         except (Exception, psycopg2.Error) as error:
@@ -138,9 +138,7 @@ class Headhunter():
         pass
 
 x = Headhunter()
-
 for url in x.GetVacancyList():
-    print(url)
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
     print(vacancy_detail_dict['employer']['name'])
@@ -157,7 +155,7 @@ for url in x.GetVacancyList():
 
     # запись работодателей в БД
     employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
-    if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', employer_tuple[0])]:
+    if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', vacancy_detail_dict['employer']['name'])]:
         x.InsertToBase('employer', 'name, url', employer_tuple)
 
     # обработка пустых значений вознаграждения
@@ -202,8 +200,3 @@ for url in x.GetVacancyList():
     for pair in vacancy_id_skill_id_pair:
         if pair not in [pair[0:2] for pair in x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0])]:
             x.InsertToBase('vacancy_skill', 'vacancy_id, keyskill_id', pair)
-
-# print(x.SelectFromBase('id, name', 'vacancy'))
-# print(x.SelectFromBase('id, name', 'city'))
-# print(x.SelectFromBase('id, name', 'keyskill'))
-# print(x.SelectFromBase('id, name, url', 'employer'))
