@@ -2,7 +2,7 @@ import requests
 import json
 import time
 import psycopg2
-import db_setting
+import db_setting # файл с настройками для БД
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 class Headhunter():
@@ -25,7 +25,7 @@ class Headhunter():
 
         def getPage(page = 0):
             """
-            Функция для получения страницы со списком вакансий. \n
+            Функция для получения страницы со списком вакансий.\n
             Аргументы:\n
                 page - Индекс страницы (число), начинается с 0. Значение по умолчанию 0, т.е. первая страница\n
             """
@@ -78,6 +78,7 @@ class Headhunter():
             values - значения (кортеж)\n
         """
         try:
+            # кортеж параметров для подключения к БД
             connection = psycopg2.connect(
                 user = self.login,
                 password = self.password,
@@ -108,7 +109,8 @@ class Headhunter():
             Передается ТОЛЬКО по подному аргументу фильтрации.
         """
         try:
-            connection = psycopg2.connect(
+            # кортеж параметров для подключения к БД
+            connection = psycopg2.connect( 
                 user = self.login,
                 password = self.password,
                 host = self.host,
@@ -116,15 +118,14 @@ class Headhunter():
                 database = self.database
             )
             cursor = connection.cursor()
-            if filter_colomn == '':
-                # sql_select = f"SELECT {columns} FROM {table_name};"
+            # проверка на наличие фильтров для запроса к БД
+            if filter_colomn == '': # если не указан фильтрующий столбец
                 sql_select = """SELECT {col} FROM {t_name};"""
-            elif filter_value == '':
-                # sql_select = f"SELECT {columns} FROM {table_name} WHERE ({filter_colomn}) IS NOT NULL;"
+            elif filter_value == '': # если не указано фильтрующее значение в столбце
                 sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} IS NOT NULL;"""
             else:
-                # sql_select = f"SELECT {columns} FROM {table_name} WHERE {filter_colomn}=('{filter_value}');"
-                sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} = $${f_val}$$;"""
+                sql_select = """SELECT {col} FROM {t_name} WHERE {f_col} = $${f_val}$$;""" # «заключение строк в доллары» для обхода ' в фильтрующих значениях (напр. Л'Этуаль)
+                # https://postgrespro.ru/docs/postgresql/9.6/sql-syntax-lexical пункт 4.1.2.4
             cursor.execute(sql_select.format(col = columns, t_name = table_name, f_col = filter_colomn, f_val = filter_value))
             return cursor.fetchall()
         except (Exception, psycopg2.Error) as error:
@@ -141,62 +142,79 @@ x = Headhunter()
 for url in x.GetVacancyList():
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
-    print(vacancy_detail_dict['employer']['name'])
-    # запись ключевых навыков в БД
-    skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
-    for skill in skill_list:
-        if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill', 'name', skill)]:
-            x.InsertToBase('keyskill', 'name', (skill,))
-    
-    # запись городов в БД
-    city_name = vacancy_detail_dict['area']['name']
-    if city_name not in [city[0] for city in x.SelectFromBase('name', 'city', 'name', city_name)]:
-        x.InsertToBase('city', 'name', (city_name,) )
+    # проверяем наличие hh_id в локальной БД что бы не дергать базу одними и теми же вакансиями
+    # и начинаем проверку других таблиц только если hh_id нет в базе
+    if vacancy_detail_dict['id'] not in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_dict['id']):
+        # запись ключевых навыков в БД
+        skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
+        for skill in skill_list:
+            if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill', 'name', skill)]:
+                x.InsertToBase('keyskill', 'name', (skill,))
+        
+        # запись городов в БД
+        city_name = vacancy_detail_dict['area']['name']
+        if city_name not in [city[0] for city in x.SelectFromBase('name', 'city', 'name', city_name)]:
+            x.InsertToBase('city', 'name', (city_name,) )
 
-    # запись работодателей в БД
-    employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
-    if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', vacancy_detail_dict['employer']['name'])]:
-        x.InsertToBase('employer', 'name, url', employer_tuple)
+        # запись работодателей в БД
+        employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
+        if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', vacancy_detail_dict['employer']['name'])]:
+            x.InsertToBase('employer', 'name, url', employer_tuple)
 
-    # обработка пустых значений вознаграждения
-    if vacancy_detail_dict['salary'] is None:
-        salary_from = 0
-        salary_to = 0
-        salary_currency = 'n/n'
-    else:
-        salary_from = vacancy_detail_dict['salary']['from']
-
-        if vacancy_detail_dict['salary']['to'] is None:
+        # обработка пустых значений вознаграждения
+        if vacancy_detail_dict['salary'] is None:
+            salary_from = 0
             salary_to = 0
+            salary_currency = 'n/n'
         else:
-            salary_to = vacancy_detail_dict['salary']['to']
-        salary_currency = vacancy_detail_dict['salary']['currency']
-    
-    # кортеж с данными о вакансии
-    vacancy_detail_tuple = (
-        vacancy_detail_dict['id'], #строка
-        vacancy_detail_dict['name'],
-        salary_from,
-        salary_to,
-        salary_currency,
-        vacancy_detail_dict['description'],
-        vacancy_detail_dict['created_at'][:10],
-        [id[0] for id in x.SelectFromBase('id', 'city', 'name', vacancy_detail_dict['area']['name'])][0],
-        [id[0] for id in x.SelectFromBase('id', 'employer', 'name', vacancy_detail_dict['employer']['name'])][0]
-    )
+            salary_from = vacancy_detail_dict['salary']['from']
 
-    # запись вакансии в БД
-    if int(vacancy_detail_tuple[0]) not in [vacancy_id[0] for vacancy_id in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_tuple[0])]:
-        x.InsertToBase(
-            'vacancy',
-            'hh_id, name, salary_from, salary_to, salary_currency, description, date_create, city_id, employer_id',
-            vacancy_detail_tuple
-            )
-    
-    # запись связующей таблицы vacancy_skill
-    vacancy_id = [id[0] for id in x.SelectFromBase('id', 'vacancy', 'hh_id', vacancy_detail_dict['id'])]
-    skill_id_list = [[id[0] for id in x.SelectFromBase('id', 'keyskill', 'name', skill)][0] for skill in skill_list]
-    vacancy_id_skill_id_pair = [(vac_id, s_id) for vac_id in vacancy_id for s_id in skill_id_list]
-    for pair in vacancy_id_skill_id_pair:
-        if pair not in [pair[0:2] for pair in x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0])]:
-            x.InsertToBase('vacancy_skill', 'vacancy_id, keyskill_id', pair)
+            if vacancy_detail_dict['salary']['to'] is None:
+                salary_to = 0
+            else:
+                salary_to = vacancy_detail_dict['salary']['to']
+            salary_currency = vacancy_detail_dict['salary']['currency']
+        
+        # кортеж с данными о вакансии
+        vacancy_detail_tuple = (
+            vacancy_detail_dict['id'], #строка
+            vacancy_detail_dict['name'],
+            salary_from,
+            salary_to,
+            salary_currency,
+            vacancy_detail_dict['description'],
+            vacancy_detail_dict['created_at'][:10],
+            [id[0] for id in x.SelectFromBase('id', 'city', 'name', vacancy_detail_dict['area']['name'])][0],
+            [id[0] for id in x.SelectFromBase('id', 'employer', 'name', vacancy_detail_dict['employer']['name'])][0]
+        )
+
+        # запись вакансии в БД
+        if int(vacancy_detail_tuple[0]) not in [vacancy_id[0] for vacancy_id in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_tuple[0])]:
+            x.InsertToBase(
+                'vacancy',
+                'hh_id, name, salary_from, salary_to, salary_currency, description, date_create, city_id, employer_id',
+                vacancy_detail_tuple
+                )
+        
+        # запись связующей таблицы vacancy_skill
+        vacancy_id = [id[0] for id in x.SelectFromBase('id', 'vacancy', 'hh_id', vacancy_detail_dict['id'])]
+        skill_id_list = [[id[0] for id in x.SelectFromBase('id', 'keyskill', 'name', skill)][0] for skill in skill_list]
+        vacancy_id_skill_id_pair = [(vac_id, s_id) for vac_id in vacancy_id for s_id in skill_id_list]
+        for pair in vacancy_id_skill_id_pair:
+            if pair not in [pair for pair in x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0])]:
+                x.InsertToBase('vacancy_skill', 'vacancy_id, keyskill_id', pair)
+
+# select vacancy.name, keyskill.name, employer.name
+# from 
+#   vacancy 
+# left join 
+#   employer 
+#       on vacancy.employer_id = employer.id
+# left join
+#   vacancy_skill
+#       on vacancy.id = vacancy_skill.vacancy_id
+# left join
+#   keyskill
+#       on vacancy_skill.keyskill_id = keyskill.id
+# where
+#   keyskill.name='Python';
