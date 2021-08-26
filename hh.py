@@ -5,46 +5,23 @@ import psycopg2
 import db_setting # файл с настройками для БД
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-class Headhunter():
-    def __init__(self):
-        self.login = db_setting.LOGIN
-        self.password = db_setting.PASSWORD
-        self.host = db_setting.HOST
-        self.port = db_setting.PORT
-        self.database = db_setting.DB_NAME
-
-    def GetVacancyList(self, text="python junior", area=113):
-        """
-        Метод для полуяения списка ссылок на вакансии. \n
-        Аргументы:\n
-            text - поисковый запрос (строка)\n
-            area - регион поиска (число). 113 - Россия\n
-        """
+class Headhunter:
+    def __init__(self, text = 'python junior', area = 113):
         self.text = text
         self.area = area
-
-        def getPage(page = 0):
-            """
-            Функция для получения страницы со списком вакансий.\n
-            Аргументы:\n
-                page - Индекс страницы (число), начинается с 0. Значение по умолчанию 0, т.е. первая страница\n
-            """
-            # Словарь для параметров GET-запроса
-            params = {
-                'text': self.text,
-                'page': page, # Индекс страницы поиска на HH
-                'per_page': 100, # Кол-во вакансий на 1 странице
-                'area': self.area 
-            }
         
-            req = requests.get('https://api.hh.ru/vacancies', params) # Посылаем запрос к API
-            data = req.content.decode() # Декодируем его ответ, чтобы Кириллица отображалась корректно
-            req.close()
-            return data
-            
+    def GetVacancysList(self):
+       
+        """
+        Метод для полуяения списка ссылок на вакансии. \n
+        Без аргументов.\n
+        Внутри себя вызывает приватный метод __GetPage\n
+        """
+       
         self.url_list = []
+
         for page in range(20):
-            js_str = getPage(page) #получаем ответ в виде json - файла
+            js_str = self.__GetPage(page) #получаем ответ в виде json - файла
             js = json.loads(js_str) # Преобразуем текст ответа запроса в словарь Python
             # добавляем url в список ссылок
             self.url_list.extend([js['items'][i]['url'] for i in range(len(js['items']))])
@@ -53,6 +30,26 @@ class Headhunter():
             time.sleep(0.5)
         return self.url_list
 
+    def __GetPage(self, page = 0):
+        """
+        Функция для получения страницы со списком вакансий.\n
+        Аргументы:\n
+            page - Индекс страницы (число), начинается с 0. Значение по умолчанию 0, т.е. первая страница\n
+        """
+        # Словарь для параметров GET-запроса
+        params = {
+            'text': self.text,
+            'page': page, # Индекс страницы поиска на HH
+            'per_page': 100, # Кол-во вакансий на 1 странице
+            'area': self.area 
+        }
+        
+        req = requests.get('https://api.hh.ru/vacancies', params) # Посылаем запрос к API
+        data = req.content.decode() # Декодируем его ответ, чтобы Кириллица отображалась корректно
+        req.close()
+        return data
+            
+        
     def GetVacancyDetail(self, url):
         """
         Метод для получения детальной информации о вакансии\n
@@ -68,6 +65,14 @@ class Headhunter():
         time.sleep(0.3)
         return self.detail
 
+
+class DatabaseWorker():
+    def __init__(self):
+        self.login = db_setting.LOGIN
+        self.password = db_setting.PASSWORD
+        self.host = db_setting.HOST
+        self.port = db_setting.PORT
+        self.database = db_setting.DB_NAME
 
     def InsertToBase(self, table_name, columns, values):
         """
@@ -138,7 +143,7 @@ class Headhunter():
     def JoinTables(self):
         pass
 
-x = Headhunter()
+vacancys = Headhunter()
 for url in x.GetVacancyList():
     # что бы не делать запрос к API каждый раз
     vacancy_detail_dict = x.GetVacancyDetail(url)
