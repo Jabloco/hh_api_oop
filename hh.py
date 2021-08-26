@@ -144,9 +144,11 @@ class DatabaseWorker():
         pass
 
 vacancys = Headhunter()
-for url in x.GetVacancyList():
+x = DatabaseWorker()
+for url in vacancys.GetVacancysList():
     # что бы не делать запрос к API каждый раз
-    vacancy_detail_dict = x.GetVacancyDetail(url)
+    vacancy_detail_dict = vacancys.GetVacancyDetail(url)
+    
     # проверяем наличие hh_id в локальной БД что бы не дергать базу одними и теми же вакансиями
     # и начинаем проверку других таблиц только если hh_id нет в базе
     if vacancy_detail_dict['id'] not in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_dict['id']):
