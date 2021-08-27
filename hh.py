@@ -225,3 +225,19 @@ for url in vacancys.GetVacancysList():
 #       on vacancy_skill.keyskill_id = keyskill.id
 # where
 #   keyskill.name='Python';
+
+# посчитать в скольких выкансиях встечается навык, например, Python
+# select keyskill.name, count(*) 
+# from keyskill 
+# left join vacancy_skill on vacancy_skill.keyskill_id = keyskill.id
+# where vacancy_skill.keyskill_id = (select id from keyskill where name='Python')
+# group by keyskill.name;
+
+# вывод ключевых навыков со счетчиком для каждого
+
+# select keyskill.name, count(*)
+# from keyskill
+# left join vacancy_skill on vacancy_skill.keyskill_id = keyskill.id
+# group by keyskill.name # группировка поимени навыка
+# order by count desc # сортировка по возрастанию счетчика
+# limit 25; # лимит в 25 строк
