@@ -121,20 +121,26 @@ for url in vacancys.GetVacancysList():
         # запись ключевых навыков в БД
         skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
         for skill in skill_list:
-            select_keyskill = """SELECT name FROM keyskill WHERE name = $${req_skill}$$""".format(req_skill=skill)
+            select_keyskill = """SELECT name FROM keyskill WHERE name = $${req_skill}$$;""".format(req_skill=skill)
             if skill not in [skill[0] for skill in db.SqlRequest(select_keyskill)]:
-                insert_keyskill = """INSERT INTO keyskill (name) VALUES $${req_skill}$$""".format(req_skill=skill)
+                insert_keyskill = """INSERT INTO keyskill (name) VALUES ($${req_skill}$$);""".format(req_skill=skill)
                 db.SqlRequest(insert_keyskill)
         
-#         # запись городов в БД
-#         city_name = vacancy_detail_dict['area']['name']
-#         if city_name not in [city[0] for city in x.SelectFromBase('name', 'city', 'name', city_name)]:
-#             x.InsertToBase('city', 'name', (city_name,) )
+        # запись городов в БД
+        city_name = vacancy_detail_dict['area']['name']
+        select_city = """SELECT name FROM city WHERE name = $${req_city}$$""".format(req_city = city_name)
+        if city_name not in [city[0] for city in db.SqlRequest(select_city)]:
+            insert_city = """INSERT INTO city (name) VALUES ($${req_city}$$)""".format(req_city = city_name)
+            db.SqlRequest(insert_city)
 
-#         # запись работодателей в БД
-#         employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
-#         if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', vacancy_detail_dict['employer']['name'])]:
-#             x.InsertToBase('employer', 'name, url', employer_tuple)
+        # запись работодателей в БД
+        employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
+        select_employer = """SELECT name FROM employer WHERE name = $${req_employer}$$""".format(req_employer=vacancy_detail_dict['employer']['name'])
+        if employer_tuple[0] not in [employer[0] for employer in db.SqlRequest(select_employer)]:
+            insert_employer = """INSERT INTO employer (name, url) VALUES {req_employer}""".format(req_employer=employer_tuple)
+            print(employer_tuple)
+            # x.InsertToBase('employer', 'name, url', employer_tuple)
+            db.SqlRequest(insert_employer)
 
 #         # обработка пустых значений вознаграждения
 #         if vacancy_detail_dict['salary'] is None:
@@ -182,74 +188,6 @@ for url in vacancys.GetVacancysList():
 
 # req = """SELect id, name FROM keyskill where name = 'Python'"""
 # print(db.SqlRequest(req))
-
-# vacancys = Headhunter()
-# x = DatabaseWorker()
-# for url in vacancys.GetVacancysList():
-#     # что бы не делать запрос к API каждый раз
-#     vacancy_detail_dict = vacancys.GetVacancyDetail(url)
-    
-#     # проверяем наличие hh_id в локальной БД что бы не дергать базу одними и теми же вакансиями
-#     # и начинаем проверку других таблиц только если hh_id нет в базе
-#     if vacancy_detail_dict['id'] not in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_dict['id']):
-#         # запись ключевых навыков в БД
-#         skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
-#         for skill in skill_list:
-#             if skill not in [skill[0] for skill in x.SelectFromBase('name', 'keyskill', 'name', skill)]:
-#                 x.InsertToBase('keyskill', 'name', (skill,))
-        
-#         # запись городов в БД
-#         city_name = vacancy_detail_dict['area']['name']
-#         if city_name not in [city[0] for city in x.SelectFromBase('name', 'city', 'name', city_name)]:
-#             x.InsertToBase('city', 'name', (city_name,) )
-
-#         # запись работодателей в БД
-#         employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
-#         if employer_tuple[0] not in [employer[0] for employer in x.SelectFromBase('name', 'employer', 'name', vacancy_detail_dict['employer']['name'])]:
-#             x.InsertToBase('employer', 'name, url', employer_tuple)
-
-#         # обработка пустых значений вознаграждения
-#         if vacancy_detail_dict['salary'] is None:
-#             salary_from = 0
-#             salary_to = 0
-#             salary_currency = 'n/n'
-#         else:
-#             salary_from = vacancy_detail_dict['salary']['from']
-
-#             if vacancy_detail_dict['salary']['to'] is None:
-#                 salary_to = 0
-#             else:
-#                 salary_to = vacancy_detail_dict['salary']['to']
-#             salary_currency = vacancy_detail_dict['salary']['currency']
-        
-#         # кортеж с данными о вакансии
-#         vacancy_detail_tuple = (
-#             vacancy_detail_dict['id'], #строка
-#             vacancy_detail_dict['name'],
-#             salary_from,
-#             salary_to,
-#             salary_currency,
-#             vacancy_detail_dict['description'],
-#             vacancy_detail_dict['created_at'][:10],
-#             [id[0] for id in x.SelectFromBase('id', 'city', 'name', vacancy_detail_dict['area']['name'])][0],
-#             [id[0] for id in x.SelectFromBase('id', 'employer', 'name', vacancy_detail_dict['employer']['name'])][0]
-#         )
-
-#         # запись вакансии в БД
-#         if int(vacancy_detail_tuple[0]) not in [vacancy_id[0] for vacancy_id in x.SelectFromBase('hh_id', 'vacancy', 'hh_id', vacancy_detail_tuple[0])]:
-#             x.InsertToBase(
-#                 'vacancy',
-#                 'hh_id, name, salary_from, salary_to, salary_currency, description, date_create, city_id, employer_id',
-#                 vacancy_detail_tuple
-#                 )
-        
-#         # запись связующей таблицы vacancy_skill
-#         vacancy_id = [id[0] for id in x.SelectFromBase('id', 'vacancy', 'hh_id', vacancy_detail_dict['id'])]
-#         skill_id_list = [[id[0] for id in x.SelectFromBase('id', 'keyskill', 'name', skill)][0] for skill in skill_list]
-#         vacancy_id_skill_id_pair = [(vac_id, s_id) for vac_id in vacancy_id for s_id in skill_id_list]
-#         for pair in vacancy_id_skill_id_pair:
-#             if pair not in [pair for pair in x.SelectFromBase('vacancy_id, keyskill_id', 'vacancy_skill', 'vacancy_id', vacancy_id[0])]:
-#                 x.InsertToBase('vacancy_skill', 'vacancy_id, keyskill_id', pair)
 
 # select vacancy.name, keyskill.name, employer.name
 # from 
