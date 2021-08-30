@@ -121,10 +121,26 @@ for url in vacancys.GetVacancysList():
         # запись ключевых навыков в БД
         skill_list = [skill['name'] for skill in vacancy_detail_dict['key_skills']]
         for skill in skill_list:
-            select_keyskill = """SELECT name FROM keyskill WHERE name = $${req_skill}$$""".format(req_skill=skill)
+            select_keyskill = """SELECT name FROM keyskill WHERE name = $${req_skill}$$;""".format(req_skill=skill)
             if skill not in [skill[0] for skill in db.SqlRequest(select_keyskill)]:
-                insert_keyskill = """INSERT INTO keyskill (name) VALUES $${req_skill}$$""".format(req_skill=skill)
+                insert_keyskill = """INSERT INTO keyskill (name) VALUES ($${req_skill}$$);""".format(req_skill=skill)
                 db.SqlRequest(insert_keyskill)
+        
+        # запись городов в БД
+        city_name = vacancy_detail_dict['area']['name']
+        select_city = """SELECT name FROM city WHERE name = $${req_city}$$""".format(req_city = city_name)
+        if city_name not in [city[0] for city in db.SqlRequest(select_city)]:
+            insert_city = """INSERT INTO city (name) VALUES ($${req_city}$$)""".format(req_city = city_name)
+            db.SqlRequest(insert_city)
+
+        # запись работодателей в БД
+        employer_tuple = (vacancy_detail_dict['employer']['name'], vacancy_detail_dict['employer']['url'])
+        select_employer = """SELECT name FROM employer WHERE name = $${req_employer}$$""".format(req_employer=vacancy_detail_dict['employer']['name'])
+        if employer_tuple[0] not in [employer[0] for employer in db.SqlRequest(select_employer)]:
+            insert_employer = """INSERT INTO employer (name, url) VALUES {req_employer}""".format(req_employer=employer_tuple)
+            print(employer_tuple)
+            # x.InsertToBase('employer', 'name, url', employer_tuple)
+            db.SqlRequest(insert_employer)
         
 #         # запись городов в БД
 #         city_name = vacancy_detail_dict['area']['name']
